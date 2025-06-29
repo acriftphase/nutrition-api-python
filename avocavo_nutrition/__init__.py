@@ -47,6 +47,9 @@ __all__ = [
     'analyze_ingredient',
     'analyze_recipe',
     
+    # API key management (when using NutritionAPI client)
+    # Access via: client.list_api_keys(), client.create_api_key(), etc.
+    
     # Package info
     '__version__',
     '__author__',

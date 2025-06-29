@@ -204,6 +204,123 @@ class NutritionAPI:
         
         return self._parse_account_info(response)
     
+    def list_api_keys(self) -> Dict:
+        """
+        List all API keys for the current user
+        
+        Returns:
+            Dictionary with list of API keys and usage information
+            
+        Example:
+            keys = client.list_api_keys()
+            for key in keys['keys']:
+                print(f"{key['name']}: {key['usage']['current_month']}/{key['usage']['limit']}")
+        """
+        response = self._make_request('GET', '/api/keys')
+        return response
+    
+    def create_api_key(self, name: str, description: str = None, environment: str = None) -> Dict:
+        """
+        Create a new API key
+        
+        Args:
+            name: Name for the API key (e.g., "Production App", "Development")
+            description: Optional description of the key's purpose
+            environment: Optional environment tag (e.g., "production", "staging")
+            
+        Returns:
+            Dictionary with new API key information (full key shown only once)
+            
+        Example:
+            new_key = client.create_api_key("Mobile App Production", 
+                                          description="API key for production mobile app",
+                                          environment="production")
+            print(f"New key: {new_key['key']['api_key']}")  # Save this securely!
+        """
+        data = {
+            "name": name,
+            "description": description,
+            "environment": environment
+        }
+        response = self._make_request('POST', '/api/keys', data)
+        return response
+    
+    def update_api_key(self, key_id: int, name: str = None, description: str = None, environment: str = None) -> Dict:
+        """
+        Update an existing API key's metadata
+        
+        Args:
+            key_id: ID of the key to update
+            name: New name for the key (optional)
+            description: New description (optional)
+            environment: New environment tag (optional)
+            
+        Returns:
+            Dictionary with updated key information
+            
+        Example:
+            updated = client.update_api_key(123, name="Mobile App Staging", environment="staging")
+        """
+        data = {}
+        if name is not None:
+            data["name"] = name
+        if description is not None:
+            data["description"] = description
+        if environment is not None:
+            data["environment"] = environment
+            
+        response = self._make_request('PUT', f'/api/keys/{key_id}', data)
+        return response
+    
+    def delete_api_key(self, key_id: int) -> Dict:
+        """
+        Delete (deactivate) an API key
+        
+        Args:
+            key_id: ID of the key to delete
+            
+        Returns:
+            Dictionary with deletion confirmation
+            
+        Example:
+            result = client.delete_api_key(123)
+            print(result['message'])
+        """
+        response = self._make_request('DELETE', f'/api/keys/{key_id}')
+        return response
+    
+    def regenerate_api_key(self, key_id: int) -> Dict:
+        """
+        Regenerate an API key (creates new key value, keeps metadata)
+        
+        Args:
+            key_id: ID of the key to regenerate
+            
+        Returns:
+            Dictionary with new API key value (shown only once)
+            
+        Example:
+            regenerated = client.regenerate_api_key(123)
+            print(f"New key: {regenerated['key']['api_key']}")  # Save this securely!
+        """
+        response = self._make_request('POST', f'/api/keys/{key_id}/regenerate')
+        return response
+    
+    def get_usage_summary(self) -> Dict:
+        """
+        Get usage summary across all API keys
+        
+        Returns:
+            Dictionary with aggregated usage statistics
+            
+        Example:
+            summary = client.get_usage_summary()
+            print(f"Total usage: {summary['summary']['total_monthly_usage']}")
+            print(f"Keys over limit: {summary['summary']['keys_over_limit']}")
+        """
+        response = self._make_request('GET', '/api/keys/usage')
+        return response
+    
     def verify_fdc_id(self, fdc_id: int) -> Dict:
         """
         Get detailed information about a specific USDA food entry
