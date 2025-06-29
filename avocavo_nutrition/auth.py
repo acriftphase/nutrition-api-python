@@ -1,12 +1,15 @@
 """
 Authentication module for Avocavo Nutrition API
 Handles user login, logout, and API key management
+Supports both email/password and OAuth browser login
 """
 
 import os
 import json
 import keyring
 import requests
+import webbrowser
+import time
 from typing import Optional, Dict
 from pathlib import Path
 from .models import Account
@@ -28,13 +31,14 @@ class AuthManager:
         # Ensure config directory exists
         self.config_dir.mkdir(exist_ok=True)
     
-    def login(self, email: str, password: str) -> Dict:
+    def login(self, email: str = None, password: str = None, provider: str = "google") -> Dict:
         """
-        Login with email and password, store API key securely
+        Login with email/password or OAuth browser login
         
         Args:
-            email: User email
-            password: User password
+            email: User email (for email/password login)
+            password: User password (for email/password login)
+            provider: OAuth provider ("google" or "github") for browser login
             
         Returns:
             Dictionary with user info and API key
@@ -42,6 +46,15 @@ class AuthManager:
         Raises:
             AuthenticationError: If login fails
         """
+        # If email and password provided, use traditional login
+        if email and password:
+            return self._login_with_password(email, password)
+        
+        # Otherwise use OAuth browser login
+        return self._login_with_oauth(provider)
+    
+    def _login_with_password(self, email: str, password: str) -> Dict:
+        """Traditional email/password login"""
         try:
             response = requests.post(
                 f"{self.base_url}/api/auth/login",
@@ -77,7 +90,8 @@ class AuthManager:
                 'email': email,
                 'user_id': user_info.get('id'),
                 'api_tier': user_info.get('api_tier', 'developer'),
-                'logged_in_at': data.get('timestamp')
+                'logged_in_at': data.get('timestamp'),
+                'login_method': 'password'
             })
             
             return {
@@ -90,6 +104,110 @@ class AuthManager:
             
         except requests.exceptions.RequestException as e:
             raise AuthenticationError(f"Connection error: {str(e)}")
+    
+    def _login_with_oauth(self, provider: str) -> Dict:
+        """OAuth browser login with Google or GitHub"""
+        try:
+            print(f"🔐 Initiating {provider.title()} OAuth login...")
+            
+            # Step 1: Initiate OAuth flow
+            response = requests.post(
+                f"{self.base_url}/api/auth/login",
+                json={"provider": provider},
+                timeout=30
+            )
+            
+            if response.status_code != 200:
+                data = response.json() if response.content else {}
+                raise AuthenticationError(data.get('error', f'Failed to initiate {provider} login'))
+            
+            auth_data = response.json()
+            if not auth_data.get('success'):
+                raise AuthenticationError(auth_data.get('error', 'OAuth initiation failed'))
+            
+            session_id = auth_data.get('session_id')
+            oauth_url = auth_data.get('oauth_url')
+            
+            if not session_id or not oauth_url:
+                raise AuthenticationError("Invalid OAuth response from server")
+            
+            # Step 2: Open browser for user authentication
+            print(f"🌐 Opening browser for {provider.title()} authentication...")
+            print(f"📋 If browser doesn't open automatically, visit: {oauth_url}")
+            
+            try:
+                webbrowser.open(oauth_url)
+            except Exception:
+                print("⚠️  Could not open browser automatically")
+            
+            # Step 3: Poll for completion
+            print("⏳ Waiting for authentication to complete...")
+            max_attempts = 60  # 5 minutes timeout
+            attempt = 0
+            
+            while attempt < max_attempts:
+                try:
+                    status_response = requests.get(
+                        f"{self.base_url}/api/auth/status/{session_id}",
+                        timeout=10
+                    )
+                    
+                    if status_response.status_code == 200:
+                        status_data = status_response.json()
+                        
+                        if status_data.get('status') == 'completed':
+                            # Success! Store credentials
+                            api_token = status_data.get('api_token')
+                            user_email = status_data.get('user_email')
+                            
+                            if api_token and user_email:
+                                self._store_api_key(user_email, api_token)
+                                
+                                # Store user config
+                                self._store_user_config({
+                                    'email': user_email,
+                                    'api_tier': 'developer',  # Default for OAuth users
+                                    'logged_in_at': time.time(),
+                                    'login_method': 'oauth',
+                                    'oauth_provider': provider
+                                })
+                                
+                                print(f"✅ Login successful! Welcome {user_email}")
+                                
+                                return {
+                                    'success': True,
+                                    'email': user_email,
+                                    'api_tier': 'developer',
+                                    'provider': provider,
+                                    'message': f'{provider.title()} OAuth login successful'
+                                }
+                            else:
+                                raise AuthenticationError("Invalid response from OAuth completion")
+                        
+                        elif status_data.get('status') == 'error':
+                            raise AuthenticationError(status_data.get('error', 'OAuth authentication failed'))
+                        
+                        # Still pending, continue polling
+                        if attempt == 0:
+                            print("👆 Please complete authentication in your browser...")
+                        elif attempt % 10 == 0:  # Show progress every 10 attempts
+                            print("⏳ Still waiting for authentication...")
+                    
+                    elif status_response.status_code == 404:
+                        raise AuthenticationError("OAuth session expired. Please try again.")
+                
+                except requests.exceptions.RequestException:
+                    pass  # Network issues, continue trying
+                
+                time.sleep(5)  # Wait 5 seconds between polls
+                attempt += 1
+            
+            raise AuthenticationError("OAuth login timed out. Please try again.")
+            
+        except AuthenticationError:
+            raise
+        except Exception as e:
+            raise AuthenticationError(f"OAuth login failed: {str(e)}")
     
     def logout(self) -> Dict:
         """
@@ -196,22 +314,29 @@ class AuthManager:
 _auth_manager = AuthManager()
 
 
-def login(email: str, password: str, base_url: str = "https://app.avocavo.app") -> Dict:
+def login(email: str = None, password: str = None, provider: str = "google", base_url: str = "https://app.avocavo.app") -> Dict:
     """
     Login to Avocavo and store API key securely
     
     Args:
-        email: Your Avocavo account email
-        password: Your Avocavo account password
+        email: Your email (for email/password login)
+        password: Your password (for email/password login)
+        provider: OAuth provider ("google" or "github") for browser login
         base_url: API base URL (defaults to production)
         
     Returns:
         Login result with user info
         
-    Example:
+    Examples:
         import avocavo_nutrition as av
         
+        # OAuth browser login (recommended)
+        result = av.login()  # Opens browser for Google OAuth
+        result = av.login(provider="github")  # Opens browser for GitHub OAuth
+        
+        # Email/password login (legacy)
         result = av.login("user@example.com", "password")
+        
         if result['success']:
             print(f"Logged in as {result['email']}")
             
@@ -220,7 +345,7 @@ def login(email: str, password: str, base_url: str = "https://app.avocavo.app") 
     """
     global _auth_manager
     _auth_manager = AuthManager(base_url)
-    return _auth_manager.login(email, password)
+    return _auth_manager.login(email, password, provider)
 
 
 def logout() -> Dict:
