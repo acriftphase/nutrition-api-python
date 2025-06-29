@@ -186,6 +186,7 @@ class NutritionAPI:
         
         return self._parse_batch_result(response, ingredients)
     
+    
     def get_account_usage(self) -> Account:
         """
         Get current account information and usage statistics
@@ -474,3 +475,5 @@ def analyze_recipe(ingredients: List[str], servings: int = 1, api_key: Optional[
     """
     client = NutritionAPI(api_key, base_url)
     return client.analyze_recipe(ingredients, servings)
+
+
