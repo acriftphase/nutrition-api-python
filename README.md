@@ -17,28 +17,30 @@ Get fast, verified USDA nutrition data with just one line of code. Perfect for r
 pip install avocavo-nutrition
 ```
 
-### Login & Start Using
+### 🔐 OAuth Login (Recommended)
 
 ```python
 import avocavo_nutrition as av
 
-# Login once (credentials stored securely)
-av.login("your@email.com", "password")
+# One-time OAuth login (opens browser)
+av.login()  # Google OAuth (default)
+# av.login(provider="github")  # Or GitHub OAuth
 
-# Now use anywhere in your code
+# Now use anywhere in your code without API keys!
 result = av.analyze_ingredient("2 cups chocolate chips")
-print(f"Calories: {result.nutrition.calories}")
-print(f"Protein: {result.nutrition.protein}g")
-print(f"USDA Source: {result.usda_match.description}")
+print(f"Calories: {result.nutrition.calories_total}")
+print(f"Protein: {result.nutrition.protein_total}g")
+print(f"USDA: {result.usda_match.description}")
 ```
 
-### Alternative: API Key
+### 🔑 Direct API Key
 
 ```python
 from avocavo_nutrition import NutritionAPI
 
 client = NutritionAPI(api_key="your_api_key_here")
 result = client.analyze_ingredient("1 cup rice")
+print(f"Calories: {result.nutrition.calories_total}")
 ```
 
 ## 🎯 What You Can Do
@@ -300,7 +302,10 @@ if av.is_logged_in():
     user = av.get_current_user()
     print(f"Logged in as: {user['email']}")
 else:
-    print("Please login: av.login('email', 'password')")
+    print("Please login: av.login()")  # OAuth browser login
+
+# Login with different provider
+av.login(provider="github")  # GitHub OAuth instead of Google
 
 # Logout
 result = av.logout()

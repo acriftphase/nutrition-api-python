@@ -16,7 +16,7 @@ from .models import (
 )
 
 # Version
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 __author__ = "Avocavo"
 __email__ = "api-support@avocavo.com"
 __description__ = "Python SDK for the Avocavo Nutrition API"
