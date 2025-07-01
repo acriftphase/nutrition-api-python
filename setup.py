@@ -104,11 +104,6 @@ setup(
         "calories", "macros", "nutrients", "fooddata", "fdc", "cooking",
         "meal-planning", "diet", "wellness", "restaurant", "food-tech"
     ],
-    entry_points={
-        "console_scripts": [
-            "avocavo=avocavo_nutrition.cli:main",
-        ],
-    },
     include_package_data=True,
     zip_safe=False,
     
