@@ -4,9 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "avocavo-nutrition"
-version = "1.0.2"
+version = "1.0.3"
 authors = [
-    {name = "Avocavo", email = "api-support@avocavo.com"},
+    {name = "Avocavo", email = "support@avocavo.com"},
 ]
 description = "Python SDK for the Avocavo Nutrition API - Fast, accurate nutrition data with USDA verification"
 readme = "README.md"
