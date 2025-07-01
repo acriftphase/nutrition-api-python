@@ -136,12 +136,12 @@ print(f"Iron: {nutrition.iron}mg")
 
 | Plan | Monthly Requests | Price | Features |
 |------|------------------|-------|----------|
-| **Developer** | 500 | **Free** | Basic ingredient analysis |
-| **Starter** | 25,000 | $19/month | Batch processing, analytics |
-| **Professional** | 150,000 | $79/month | Priority support, webhooks |
-| **Enterprise** | Unlimited | $249/month | Custom integrations, SLA |
+| **Free Trial** | 100 | **Free** | One-time trial credit |
+| **Starter** | 2,500 | $9.99/month | Developer dashboard, email support |
+| **Pro** | 25,000 | $49/month | Priority support, advanced analytics |
+| **Enterprise** | 250,000+ | $249/month | SLA, dedicated support, flexible scaling |
 
-**🎁 Free Trial**: 14 days with 25,000 requests (no credit card required)
+**🎁 No Credit Card Required**: Start with 100 free API calls to test your integration
 
 [**Get your free API key →**](https://nutrition.avocavo.app)
 
